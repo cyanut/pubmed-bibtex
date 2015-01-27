@@ -1,8 +1,6 @@
 from urllib.request import urlopen
 from urllib.parse import urlencode
 import json
-from pyP2B import getPubmedReference as pmid2bib
-from pprint import pprint
 from lxml import etree
 
 PM_BASE = 'http://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
