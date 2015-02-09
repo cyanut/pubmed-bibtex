@@ -33,7 +33,7 @@ def pm_download(id_list):
         journal_tree = article_tree.xpath('MedlineCitation/Article/Journal')[0]
         year = journal_tree.xpath('JournalIssue/PubDate/Year')[0].text
         bibtexid = authl[0].text.lower() + year[-2:]
-        journal = journal_tree.xpath('Title')[0].text
+        journal = journal_tree.xpath('Title')[0].text.title()
 
         volume = journal_tree.xpath('JournalIssue/Volume')[0].text
 
