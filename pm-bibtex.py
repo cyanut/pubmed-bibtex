@@ -113,6 +113,7 @@ keywords={{{}}}
 
 
 def fetch(doi):
+    logger.debug('requesting {}'.format(SCIHUB_URL + doi))
     res = requests.get(SCIHUB_URL + doi, headers=HEADERS, verify=False)
     s = BeautifulSoup(res.content, 'html.parser')
     iframe = s.find('iframe')
@@ -121,6 +122,7 @@ def fetch(doi):
         u = iframe.get('src')
     if u:
         try:
+            logger.debug('requesting {}'.format(u))
             res = requests.get(u, headers=HEADERS, verify=False)
             if res.headers['Content-Type'] == 'application/pdf':
                 return res.content
