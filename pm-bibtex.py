@@ -1,12 +1,17 @@
 from urllib.request import urlopen
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 import json
 from lxml import etree
 import argparse
 import logging
 import requests
-from bs4 import BeautifulSoup
 import os
+import time
+import numpy as np
+from scipy.misc import imread
+import matplotlib.pyplot as plt
+from io import BytesIO
+
 
 PM_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 PM_SEARCH = '{}{}'.format(PM_BASE, 'esearch.fcgi')
@@ -111,26 +116,65 @@ keywords={{{}}}
 
     return result
 
+def solve_captcha(img):
+    im = imread(BytesIO(img))
+    plt.imshow(im)
+    plt.show()
+    captcha = input("Input captcha:")
+
+    return captcha
+
+def urlbase(url):
+    return "{0.scheme}://{0.netloc}/".format(urlsplit(url))
 
 def fetch(doi):
-    logger.debug('requesting {}'.format(SCIHUB_URL + doi))
-    res = requests.get(SCIHUB_URL + doi, headers=HEADERS, verify=False)
-    s = BeautifulSoup(res.content, 'html.parser')
-    iframe = s.find('iframe')
+    #res = requests.post(SCIHUB_URL, data={'request':doi, 'sci-hub-plugin-check':""}, headers=HEADERS)
+    sess = requests.Session()
+    sess.headers.update(HEADERS)
+    res = sess.get(SCIHUB_URL+doi)
+    with open("/tmp/test/lv1.html","w") as f:
+        f.write(res.content.decode('utf-8'))
+    s = etree.HTML(res.content)
+    iframe = s.find('.//iframe')
     u = None
-    if iframe:
+    if iframe is not None:
         u = iframe.get('src')
     if u:
-        try:
-            logger.debug('requesting {}'.format(u))
-            res = requests.get(u, headers=HEADERS, verify=False)
-            if res.headers['Content-Type'] == 'application/pdf':
-                return res.content
-            else:
-                print(res)
-        except requests.exceptions.RequestException as e:
-            logging.error("Cannot fetch pdf with DOI: {}".format(doi))
-    logger.error("Error fetching {}".format(doi))
+        captcha = None
+        while True:
+            try:
+                if captcha is None:
+                    res = sess.get(u, headers=HEADERS)
+                else:
+                    res = sess.post(u, data={'captcha_code':captcha}, headers={'Referer':u})
+                base_url = urlbase(res.url)
+                logging.debug(repr(res.headers))
+                logging.debug(repr(res.content[:100]))
+                if res.headers['Content-Type'] == 'application/pdf':
+                    return res.content
+                else:
+                    captcha_page = etree.HTML(res.content)
+                    captcha_u = captcha_page.find(".//img[@id='captcha']").get('src')
+                    logging.debug("Found captcha, getting {}".format(captcha_u))
+                    if captcha_u is not None:
+                        captcha_u = requests.compat.urljoin(base_url, captcha_u)
+                        logger.debug(captcha_u)
+                        captcha_img = sess.get(captcha_u, headers={'Referer':u})
+
+                        logger.debug(repr(captcha_img.headers))
+                        logger.debug(len(captcha_img.content))
+                        logger.debug(captcha_img.cookies)
+
+                        captcha = solve_captcha(captcha_img.content)
+                        logger.debug('Captcha: {}'.format(captcha))
+
+
+
+                    with open("lv2.html","wb") as f:
+                        f.write(res.content)
+            except requests.exceptions.RequestException as e:
+                logging.error("Cannot fetch pdf with DOI: {}".format(doi))
+        logger.error("Error fetching {}".format(doi))
 
 def loop(f):
     while True:
