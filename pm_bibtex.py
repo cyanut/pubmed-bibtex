@@ -11,7 +11,10 @@ import numpy as np
 from scipy.misc import imread
 import matplotlib.pyplot as plt
 from io import BytesIO
-
+try:
+    from captcha_solver import solve as solve_captcha
+except ImportError:
+    solve_captcha = None
 
 PM_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 PM_SEARCH = '{}{}'.format(PM_BASE, 'esearch.fcgi')
@@ -116,13 +119,15 @@ keywords={{{}}}
 
     return result
 
-def solve_captcha(img):
-    im = imread(BytesIO(img))
+def solve_manual(img):
     plt.imshow(im)
     plt.show()
     captcha = input("Input captcha:")
 
     return captcha
+
+if solve_captcha is None:
+    solve_captcha = solve_manual
 
 def urlbase(url):
     return "{0.scheme}://{0.netloc}/".format(urlsplit(url))
@@ -164,8 +169,8 @@ def fetch(doi):
                         logger.debug(repr(captcha_img.headers))
                         logger.debug(len(captcha_img.content))
                         logger.debug(captcha_img.cookies)
-
-                        captcha = solve_captcha(captcha_img.content)
+                        im = imread(BytesIO(captcha_img.content))
+                        captcha = solve_captcha(im)
                         logger.debug('Captcha: {}'.format(captcha))
 
 
