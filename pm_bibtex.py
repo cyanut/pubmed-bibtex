@@ -4,6 +4,7 @@ import json
 from lxml import etree
 import argparse
 import logging
+logger = logging.getLogger()
 import requests
 import os
 import time
@@ -12,7 +13,8 @@ from scipy.misc import imread
 import matplotlib.pyplot as plt
 from io import BytesIO
 try:
-    from captcha_solver import solve as solve_captcha
+    from captcha_solver import solver
+    solve_captcha = solver("model1k.h5")
 except ImportError:
     solve_captcha = None
 
@@ -132,20 +134,22 @@ if solve_captcha is None:
 def urlbase(url):
     return "{0.scheme}://{0.netloc}/".format(urlsplit(url))
 
-def fetch(doi):
+def fetch(doi, solve_captcha=solve_captcha):
     #res = requests.post(SCIHUB_URL, data={'request':doi, 'sci-hub-plugin-check':""}, headers=HEADERS)
     sess = requests.Session()
     sess.headers.update(HEADERS)
-    res = sess.get(SCIHUB_URL+doi)
-    with open("/tmp/test/lv1.html","w") as f:
-        f.write(res.content.decode('utf-8'))
+    res = sess.post(SCIHUB_URL, data={"request":doi, "sci-hub-plugin-check":""})
     s = etree.HTML(res.content)
     iframe = s.find('.//iframe')
     u = None
     if iframe is not None:
         u = iframe.get('src')
+        if u[:2] == "//":
+            u = "http:" + u
     if u:
         captcha = None
+        print(u)
+        logger.debug("getting page from {}".format(u))
         while True:
             try:
                 if captcha is None:
@@ -156,7 +160,7 @@ def fetch(doi):
                 logging.debug(repr(res.headers))
                 logging.debug(repr(res.content[:100]))
                 if res.headers['Content-Type'] == 'application/pdf':
-                    return res.content
+                    return u.split("/")[-1], res.content
                 else:
                     captcha_page = etree.HTML(res.content)
                     captcha_u = captcha_page.find(".//img[@id='captcha']").get('src')
@@ -174,12 +178,11 @@ def fetch(doi):
                         logger.debug('Captcha: {}'.format(captcha))
 
 
-
-                    with open("lv2.html","wb") as f:
-                        f.write(res.content)
             except requests.exceptions.RequestException as e:
                 logging.error("Cannot fetch pdf with DOI: {}".format(doi))
+                break
         logger.error("Error fetching {}".format(doi))
+    return (None, None)
 
 def loop(f):
     while True:
@@ -209,7 +212,6 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    logger = logging.getLogger()
     logging_level = logging.INFO + 10*args.quiet - 10*args.verbose
     logger.setLevel(logging_level)
     idlist = pm_search(args.query, n=1)
@@ -226,7 +228,7 @@ if __name__ == "__main__":
         if args.pdf_directory:
             doi = pm_res['doi']
             logging.info("Downloading {}".format(doi)) 
-            pdf = fetch(doi) 
+            _, pdf = fetch(doi) 
             fpath = os.path.join(args.pdf_directory, pm_res['bibtexid']+'.pdf')
             if os.path.exists(fpath):
                 logger.error("{} already exist".format(fpath))
