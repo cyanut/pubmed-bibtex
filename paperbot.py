@@ -1,5 +1,5 @@
 from slackclient import SlackClient
-from config import BOT_TOKEN, BOT_ID
+from config import BOT_TOKEN, BOT_ID, AUTHOR_ID
 import time
 from pm_bibtex import fetch
 import re
@@ -19,7 +19,11 @@ def process_slack_output(sc, slack_rtm_output):
             for l in links:
                 l = l[1:-1]
                 logging.info("found link: {}".format(l))
-                fname, res = fetch(l)
+                try:
+                    fname, res = fetch(l)
+                except:
+                    sc.rtm_send_message(message="... weird, it didn't work. <@{}> must have broken something.".format(AUTHOR_ID), channel=msg["channel"])
+                    return
                 if fname and res and res[:4] == b'%PDF':
                     logging.info("got pdf: {}".format(fname))
                     res = sc.api_call("files.upload", 

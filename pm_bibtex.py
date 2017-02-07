@@ -163,6 +163,15 @@ def fetch(doi, solve_captcha=solve_captcha):
                     return u.split("/")[-1], res.content
                 else:
                     captcha_page = etree.HTML(res.content)
+                    if u.startswith("http://libgen.io"):
+                        pdf_u = captcha_page.find('.//h2').getparent().get('href')
+                        res = sess.get(pdf_u)
+                        if res.headers['Content-Type'] == 'application/octet-stream':
+                            pdfname = "paper.pdf"
+                            return pdfname, res.content
+                        else:
+                            break
+
                     captcha_u = captcha_page.find(".//img[@id='captcha']").get('src')
                     logging.debug("Found captcha, getting {}".format(captcha_u))
                     if captcha_u is not None:
