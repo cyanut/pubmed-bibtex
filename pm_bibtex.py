@@ -43,13 +43,18 @@ def pm_download(id_list):
         for lastname, firstname in zip(authl, authf):
             authors.append('{}, {}'.format(lastname.text, firstname.text))
         authors = " and ".join(authors)
-
+    
+        if not authors:
+            logging.warning("Did not found author!")
         title = article_tree.xpath('MedlineCitation/Article/ArticleTitle')[0].text
         if title[-1] == '.':
             title = title[:-1]
         journal_tree = article_tree.xpath('MedlineCitation/Article/Journal')[0]
         year = journal_tree.xpath('JournalIssue/PubDate/Year')[0].text
-        bibtexid = authl[0].text.lower() + year[-2:]
+        if authl:
+            bibtexid = authl[0].text.lower() + year[-2:]
+        else:
+            bibtexid = "no_author" + year[-2:]
         journal = journal_tree.xpath('Title')[0].text.title()
 
         volume = journal_tree.xpath('JournalIssue/Volume')[0].text
@@ -245,10 +250,11 @@ if __name__ == "__main__":
             else:
                 with open(fpath, 'wb') as f:
                     f.write(pdf)
+        c == "y"
         if args.interactive:
             c = input("Write to bib file? (y/n)")
             c = c.strip()
-            if len(c) == 1 and (c == 'y' or c == 'Y'):
-                with open(args.bib_file, 'a') as f:
-                    f.write(ref_text)
+        if len(c) == 1 and (c == 'y' or c == 'Y'):
+            with open(args.bib_file, 'a') as f:
+                f.write(ref_text)
 
