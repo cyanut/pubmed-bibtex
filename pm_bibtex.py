@@ -50,7 +50,11 @@ def pm_download(id_list):
         if title[-1] == '.':
             title = title[:-1]
         journal_tree = article_tree.xpath('MedlineCitation/Article/Journal')[0]
-        year = journal_tree.xpath('JournalIssue/PubDate/Year')[0].text
+        try:
+            year = journal_tree.xpath('JournalIssue/PubDate/Year')[0].text
+        except IndexError:
+            year = journal_tree.xpath('JournalIssue/PubDate/MedlineDate')[0].text[:4]
+
         if authl:
             bibtexid = authl[0].text.lower() + year[-2:]
         else:
@@ -250,7 +254,7 @@ if __name__ == "__main__":
             else:
                 with open(fpath, 'wb') as f:
                     f.write(pdf)
-        c == "y"
+        c = "y"
         if args.interactive:
             c = input("Write to bib file? (y/n)")
             c = c.strip()
