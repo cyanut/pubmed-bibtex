@@ -27,8 +27,8 @@ def process_slack_output(sc, slack_rtm_output):
                 if fname and res and res[:4] == b'%PDF':
                     logging.info("got pdf: {}".format(fname))
                     res = sc.api_call("files.upload", 
-                                      file_type="pdf", 
-                                      file_name=fname, 
+                                      filetype="pdf", 
+                                      filename=fname, 
                                       file=res, 
                                       channels=msg["channel"], 
                                       title=fname, 
