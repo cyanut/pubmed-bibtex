@@ -127,6 +127,7 @@ doi={{{}}},'''.format(result, pm_res['doi'])
 keywords={{{}}}
 }}'''.format(result, pm_res['keywords'])
     
+    result = result.replace("&", "\\&")
 
     return result
 
@@ -241,12 +242,15 @@ if __name__ == "__main__":
     pm_res = pm_download(idlist)
     ref_text = fmt_pm_result(pm_res)
     logging.info(ref_text)
+    print(pm_res.keys())
 
     if args.bib_file:
         if args.pdf_directory:
-            doi = pm_res['doi']
-            logging.info("Downloading {}".format(doi)) 
-            _, pdf = fetch(doi) 
+            query = pm_res['doi']
+            if query is None:
+                query = pm_res['year'] + ' "' + pm_res['journal'] + '" "' + pm_res['title'] + '"'
+            logging.info("Downloading {}".format(query)) 
+            _, pdf = fetch(query) 
             fpath = os.path.join(args.pdf_directory, pm_res['bibtexid']+'.pdf')
             if os.path.exists(fpath):
                 logger.error("{} already exist".format(fpath))
