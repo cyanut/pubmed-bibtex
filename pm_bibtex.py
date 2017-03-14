@@ -21,7 +21,7 @@ except ImportError:
 PM_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 PM_SEARCH = '{}{}'.format(PM_BASE, 'esearch.fcgi')
 PM_DOWNLOAD = '{}{}'.format(PM_BASE, 'efetch.fcgi')
-SCIHUB_URL = 'http://sci-hub.cc/'
+SCIHUB_URL = 'http://sci-hub.ac/'
 HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0',
           }
 
