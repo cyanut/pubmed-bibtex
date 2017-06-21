@@ -144,7 +144,18 @@ if solve_captcha is None:
 def urlbase(url):
     return "{0.scheme}://{0.netloc}/".format(urlsplit(url))
 
+def get_doi(u):
+    if "www.cell.com" in u:
+        page = requests.get(u)
+        t = etree.HTML(page.content)
+        d = t.find('.//meta[@name="citation_doi"]')
+        return d.attrib['content']
+    else:
+        return u
+
 def fetch(doi, solve_captcha=solve_captcha):
+    doi = get_doi(doi)
+    print(doi)
     #res = requests.post(SCIHUB_URL, data={'request':doi, 'sci-hub-plugin-check':""}, headers=HEADERS)
     sess = requests.Session()
     sess.headers.update(HEADERS)
