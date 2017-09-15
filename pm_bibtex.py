@@ -21,7 +21,7 @@ except ImportError:
 PM_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 PM_SEARCH = '{}{}'.format(PM_BASE, 'esearch.fcgi')
 PM_DOWNLOAD = '{}{}'.format(PM_BASE, 'efetch.fcgi')
-SCIHUB_URL = 'http://sci-hub.ac/'
+SCIHUB_URL = 'https://sci-hub.cc/'
 HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0',
           }
 
@@ -150,18 +150,23 @@ def get_doi(u):
         t = etree.HTML(page.content)
         d = t.find('.//meta[@name="citation_doi"]')
         return d.attrib['content']
-    else:
+    elif "http" == u[:4]:
+        if u[:7] == "http://":
+            u = u[7:]
+        elif u[:8] == "https://":
+            u = u[8:]
         return u
 
 def fetch(doi, solve_captcha=solve_captcha):
     doi = get_doi(doi)
-    print(doi)
-    #res = requests.post(SCIHUB_URL, data={'request':doi, 'sci-hub-plugin-check':""}, headers=HEADERS)
+    logging.debug("doi:"+doi)
     sess = requests.Session()
     sess.headers.update(HEADERS)
-    res = sess.post(SCIHUB_URL, data={"request":doi, "sci-hub-plugin-check":""})
+    #res = sess.post(SCIHUB_URL, data={"request":doi, "sci-hub-plugin-check":""})
+    res = sess.get(SCIHUB_URL + doi)
     s = etree.HTML(res.content)
     iframe = s.find('.//iframe')
+    logging.debug("iframe:"+repr(iframe))
     u = None
     if iframe is not None:
         u = iframe.get('src')
@@ -169,7 +174,7 @@ def fetch(doi, solve_captcha=solve_captcha):
             u = "http:" + u
     if u:
         captcha = None
-        print(u)
+        logging.debug("u:"+u)
         logger.debug("getting page from {}".format(u))
         while True:
             try:
