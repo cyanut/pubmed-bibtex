@@ -211,7 +211,7 @@ def fetch(doi, solve_captcha=solve_captcha):
                         logger.debug(len(captcha_img.content))
                         logger.debug(captcha_img.cookies)
                         im = imread(BytesIO(captcha_img.content))
-                        imsave("/tmp/captcha.png", im)
+                        #imsave("/tmp/captcha.png", im)
                         
                         captcha = solve_captcha(im)
                         captcha_res = {"answer":captcha,
