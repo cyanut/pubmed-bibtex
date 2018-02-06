@@ -9,7 +9,7 @@ import requests
 import os
 import time
 import numpy as np
-from scipy.misc import imread
+from scipy.misc import imread, imsave
 import matplotlib.pyplot as plt
 from io import BytesIO
 try:
@@ -21,8 +21,8 @@ except ImportError:
 PM_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
 PM_SEARCH = '{}{}'.format(PM_BASE, 'esearch.fcgi')
 PM_DOWNLOAD = '{}{}'.format(PM_BASE, 'efetch.fcgi')
-SCIHUB_URL = 'https://sci-hub.cc/'
-HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:50.0) Gecko/20100101 Firefox/50.0',
+SCIHUB_URL = 'http://sci-hub.la/'
+HEADERS = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0',
           }
 
 def pm_search(q, n):
@@ -162,8 +162,9 @@ def fetch(doi, solve_captcha=solve_captcha):
     logging.debug("doi:"+doi)
     sess = requests.Session()
     sess.headers.update(HEADERS)
-    #res = sess.post(SCIHUB_URL, data={"request":doi, "sci-hub-plugin-check":""})
-    res = sess.get(SCIHUB_URL + doi)
+    res = sess.post(SCIHUB_URL, data={"request":doi, "sci-hub-plugin-check":""})
+    #res = sess.get(SCIHUB_URL + doi)
+    open("/tmp/test", "wb").write(res.content)
     s = etree.HTML(res.content)
     iframe = s.find('.//iframe')
     logging.debug("iframe:"+repr(iframe))
@@ -173,15 +174,15 @@ def fetch(doi, solve_captcha=solve_captcha):
         if u[:2] == "//":
             u = "http:" + u
     if u:
-        captcha = None
+        captcha_res = None
         logging.debug("u:"+u)
         logger.debug("getting page from {}".format(u))
         while True:
             try:
-                if captcha is None:
+                if captcha_res is None:
                     res = sess.get(u, headers=HEADERS)
                 else:
-                    res = sess.post(u, data={'captcha_code':captcha}, headers={'Referer':u})
+                    res = sess.post(u, data=captcha_res, headers={'Referer':u})
                 base_url = urlbase(res.url)
                 logging.debug(repr(res.headers))
                 logging.debug(repr(res.content[:100]))
@@ -199,7 +200,8 @@ def fetch(doi, solve_captcha=solve_captcha):
                             break
 
                     captcha_u = captcha_page.find(".//img[@id='captcha']").get('src')
-                    logging.debug("Found captcha, getting {}".format(captcha_u))
+                    captcha_id = captcha_page.find(".//input[@name='id']").get('value')
+                    logging.debug("Found captcha, getting {}, id = {}".format(captcha_u, captcha_id))
                     if captcha_u is not None:
                         captcha_u = requests.compat.urljoin(base_url, captcha_u)
                         logger.debug(captcha_u)
@@ -209,7 +211,11 @@ def fetch(doi, solve_captcha=solve_captcha):
                         logger.debug(len(captcha_img.content))
                         logger.debug(captcha_img.cookies)
                         im = imread(BytesIO(captcha_img.content))
+                        imsave("/tmp/captcha.png", im)
+                        
                         captcha = solve_captcha(im)
+                        captcha_res = {"answer":captcha,
+                                       "id":captcha_id}
                         logger.debug('Captcha: {}'.format(captcha))
 
 
